@@ -13,47 +13,71 @@ def dir(directory):
 
 jobs_arg = "-j4"
 
-def build_android(target_dir):
-  call(["scons", jobs_arg, "tools=no", "p=android", "target=release"])
+def call_or_die(cmd):
+  print "EXEC: " + " ".join(cmd)
+  ret = call(cmd)
+  if ret != 0:
+    print "Last command returned " + str(ret) + " - quitting."
+    sys.exit(ret)
+
+def build_android(target_dir, additional_params):
+  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "target=release"] + additional_params)
   with dir("platform/android/java"):
-    call(["./gradlew", "build"])
+    call_or_die(["./gradlew", "build"])
   shutil.copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
 
-  call(["scons", jobs_arg, "tools=no", "p=android", "target=release_debug"])
+  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "target=debug"] + additional_params)
   with dir("platform/android/java"):
-    call(["./gradlew", "build"])
+    call_or_die(["./gradlew", "build"])
   shutil.copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
 
-def build_ios(target_dir):
-  call(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=release", "arch=arm"])
-  call(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=release", "arch=arm64"])
+def build_iphone(target_dir, additional_params):
+  call_or_die(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=release", "arch=arm"] + additional_params)
+  call_or_die(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=release", "arch=arm64"] + additional_params)
   shutil.copyfile("bin/godot.iphone.opt.arm", "misc/dist/ios_xcode/godot.iphone.release.arm")
   shutil.copyfile("bin/godot.iphone.opt.arm64", "misc/dist/ios_xcode/godot.iphone.release.arm64")
-  call(["lipo", "-create", "bin/godot.iphone.opt.arm", "bin/godot.iphone.opt.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.release.fat"])
+  call_or_die(["lipo", "-create", "bin/godot.iphone.opt.arm", "bin/godot.iphone.opt.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.release.fat"])
 
-  call(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=debug", "arch=arm"])
-  call(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=debug", "arch=arm64"])
+  call_or_die(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=debug", "arch=arm"] + additional_params)
+  call_or_die(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=debug", "arch=arm64"] + additional_params)
   shutil.copyfile("bin/godot.iphone.debug.arm", "misc/dist/ios_xcode/godot.iphone.debug.arm")
   shutil.copyfile("bin/godot.iphone.debug.arm64", "misc/dist/ios_xcode/godot.iphone.debug.arm64")
-  call(["lipo", "-create", "bin/godot.iphone.debug.arm", "bin/godot.iphone.debug.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.debug.fat"])
+  call_or_die(["lipo", "-create", "bin/godot.iphone.debug.arm", "bin/godot.iphone.debug.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.debug.fat"])
 
   with dir("misc/dist/ios_xcode"):
-    call(["zip", "-r9", target_dir + "/iphone.zip", ".", "-i", "*"])
+    call_or_die(["zip", "-r9", target_dir + "/iphone.zip", ".", "-i", "*"])
 
-def build_osx(target_dir):
+def build_osx(target_dir, additional_params):
   binary_dir = "misc/dist/osx_template.app/Contents/MacOS/"
   if not os.path.exists(binary_dir):
     os.makedirs(binary_dir)
 
-
-  call(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release_debug"])
+  call_or_die(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release_debug"] + additional_params)
   shutil.copyfile("bin/godot.osx.opt.debug.64", binary_dir + "godot_osx_debug.64")
 
-  call(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release"])
+  call_or_die(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release"] + additional_params)
   shutil.copyfile("bin/godot.osx.opt.64", binary_dir + "godot_osx_release.64")
 
   with dir("misc/dist"):
-    call(["zip", "-r9", target_dir + "/osx.zip", "osx_template.app"])
+    call_or_die(["zip", "-r9", target_dir + "/osx.zip", "osx_template.app"])
+
+def aggregate_by_platform(params, platforms):
+  ret = {}
+  used_params = set()
+  for platform in platforms:
+    platform_params = []
+    for i, param in enumerate(params):
+      if param.startswith(platform + ":"):
+        platform_params.append(param[len(platform + ":"):])
+        used_params.add(i)
+    ret[platform] = platform_params
+
+  for i, param in enumerate(params):
+    if i not in used_params:
+      print "Bad parameter: " + param
+      sys.exit(1)
+
+  return ret
 
 if __name__ == "__main__":
   if len(sys.argv) < 4:
@@ -75,14 +99,16 @@ if __name__ == "__main__":
     f.write(version_str)
 
   exit_code = 0
+  builders = {
+    "android": build_android,
+    "iphone": build_iphone,
+    "osx": build_osx
+  }
+  aggregated_params = aggregate_by_platform(sys.argv[4:], builders)
   with dir(godot_src):
     for platform in platforms:
-      if platform == "android":
-        build_android(target_dir)
-      elif platform == "iphone":
-        build_ios(target_dir)
-      elif platform == "osx":
-        build_osx(target_dir)
+      if platform in builders:
+        builders[platform](target_dir, aggregated_params[platform])
       else:
         print("Unknown platform: " + platform)
         exit_code = 1
