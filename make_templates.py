@@ -21,12 +21,12 @@ def call_or_die(cmd):
     sys.exit(ret)
 
 def build_android(target_dir, additional_params):
-  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "target=release"] + additional_params)
+  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=release", "ndk_unified_headers=no"] + additional_params)
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
   shutil.copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
 
-  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "target=debug"] + additional_params)
+  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=debug", "ndk_unified_headers=no"] + additional_params)
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
   shutil.copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
