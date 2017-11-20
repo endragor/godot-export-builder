@@ -11,7 +11,7 @@ def dir(directory):
   finally:
     os.chdir(owd)
 
-jobs_arg = "-j4"
+jobs_arg = "-j8"
 
 def call_or_die(cmd):
   print "EXEC: " + " ".join(cmd)
@@ -32,17 +32,13 @@ def build_android(target_dir, additional_params):
   shutil.copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
 
 def build_iphone(target_dir, additional_params):
-  call_or_die(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=release", "arch=arm"] + additional_params)
-  call_or_die(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=release", "arch=arm64"] + additional_params)
-  shutil.copyfile("bin/godot.iphone.opt.arm", "misc/dist/ios_xcode/godot.iphone.release.arm")
-  shutil.copyfile("bin/godot.iphone.opt.arm64", "misc/dist/ios_xcode/godot.iphone.release.arm64")
-  call_or_die(["lipo", "-create", "bin/godot.iphone.opt.arm", "bin/godot.iphone.opt.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.release.fat"])
+  archs = ["arm", "arm64", "x86", "x86_64"]
+  for arch in archs:
+    call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release", "arch=" + arch] + additional_params)
+    call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release_debug", "arch=" + arch] + additional_params)
 
-  call_or_die(["scons", jobs_arg, "tools=no", "bits=32", "p=iphone", "target=debug", "arch=arm"] + additional_params)
-  call_or_die(["scons", jobs_arg, "tools=no", "bits=64", "p=iphone", "target=debug", "arch=arm64"] + additional_params)
-  shutil.copyfile("bin/godot.iphone.debug.arm", "misc/dist/ios_xcode/godot.iphone.debug.arm")
-  shutil.copyfile("bin/godot.iphone.debug.arm64", "misc/dist/ios_xcode/godot.iphone.debug.arm64")
-  call_or_die(["lipo", "-create", "bin/godot.iphone.debug.arm", "bin/godot.iphone.debug.arm64", "-output", "misc/dist/ios_xcode/godot.iphone.debug.fat"])
+  call_or_die(["lipo", "-create"] + map(lambda arch: "bin/libgodot.iphone.opt." + arch + ".a", archs) + ["-output", "misc/dist/ios_xcode/libgodot.iphone.release.fat.a"])
+  call_or_die(["lipo", "-create"] + map(lambda arch: "bin/libgodot.iphone.opt.debug." + arch + ".a", archs) + ["-output", "misc/dist/ios_xcode/libgodot.iphone.debug.fat.a"])
 
   with dir("misc/dist/ios_xcode"):
     call_or_die(["zip", "-r9", target_dir + "/iphone.zip", ".", "-i", "*"])
