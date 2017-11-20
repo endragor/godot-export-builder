@@ -20,16 +20,24 @@ def call_or_die(cmd):
     print "Last command returned " + str(ret) + " - quitting."
     sys.exit(ret)
 
+def copyfile(source, dest, buf_size = 1024*1024):
+  with open(source, 'rb') as src, open(dest, 'wb') as dst:
+    while True:
+      copy_buffer = src.read(buf_size)
+      if not copy_buffer:
+        break
+      dst.write(copy_buffer)
+
 def build_android(target_dir, additional_params):
   call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=release", "ndk_unified_headers=no"] + additional_params)
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
-  shutil.copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
+  copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
 
   call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=debug", "ndk_unified_headers=no"] + additional_params)
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
-  shutil.copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
+  copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
 
 def build_iphone(target_dir, additional_params):
   archs = ["arm", "arm64", "x86", "x86_64"]
@@ -49,10 +57,10 @@ def build_osx(target_dir, additional_params):
     os.makedirs(binary_dir)
 
   call_or_die(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release_debug"] + additional_params)
-  shutil.copyfile("bin/godot.osx.opt.debug.64", binary_dir + "godot_osx_debug.64")
+  copyfile("bin/godot.osx.opt.debug.64", binary_dir + "godot_osx_debug.64")
 
   call_or_die(["scons", jobs_arg, "tools=no", "p=osx", "bits=64", "target=release"] + additional_params)
-  shutil.copyfile("bin/godot.osx.opt.64", binary_dir + "godot_osx_release.64")
+  copyfile("bin/godot.osx.opt.64", binary_dir + "godot_osx_release.64")
 
   with dir("misc/dist"):
     call_or_die(["zip", "-r9", target_dir + "/osx.zip", "osx_template.app"])
@@ -87,7 +95,7 @@ if __name__ == "__main__":
   version = imp.load_source("godot.version", godot_src + "/version.py")
   version_str = str(version.major) + "." + str(version.minor) + "-" + version.status
 
-  target_dir = target_root_dir + "/" + version_str
+  target_dir = os.path.expanduser(target_root_dir) + "/" + version_str
 
   if not os.path.exists(target_dir):
     os.makedirs(target_dir)
