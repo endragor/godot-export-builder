@@ -33,11 +33,17 @@ def build_android(target_dir, additional_params):
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
   copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
+  release_symbols = "bin/libgodot_symbols.android.release.so"
+  if os.path.exists(release_symbols):
+    copyfile(release_symbols, target_dir + "/libgodot_symbols.android.release.so")
 
-  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=debug", "ndk_unified_headers=no"] + additional_params)
+  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=release_debug", "ndk_unified_headers=no"] + additional_params)
   with dir("platform/android/java"):
     call_or_die(["./gradlew", "build"])
   copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
+  debug_symbols = "bin/libgodot_symbols.android.debug.so"
+  if os.path.exists(debug_symbols):
+    copyfile(debug_symbols, target_dir + "/libgodot_symbols.android.debug.so")
 
 def build_iphone(target_dir, additional_params):
   archs = ["arm", "arm64", "x86", "x86_64"]
