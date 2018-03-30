@@ -29,24 +29,23 @@ def copyfile(source, dest, buf_size = 1024*1024):
       dst.write(copy_buffer)
 
 def build_android(target_dir, additional_params):
-  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=release", "ndk_unified_headers=no"] + additional_params)
-  with dir("platform/android/java"):
-    call_or_die(["./gradlew", "build"])
-  copyfile("bin/android_release.apk", target_dir + "/android_release.apk")
-  release_symbols = "bin/libgodot_symbols.android.release.so"
-  if os.path.exists(release_symbols):
-    copyfile(release_symbols, target_dir + "/libgodot_symbols.android.release.so")
-
-  call_or_die(["scons", jobs_arg, "tools=no", "p=android", "android_stl=true", "target=release_debug", "ndk_unified_headers=no"] + additional_params)
-  with dir("platform/android/java"):
-    call_or_die(["./gradlew", "build"])
-  copyfile("bin/android_debug.apk", target_dir + "/android_debug.apk")
-  debug_symbols = "bin/libgodot_symbols.android.debug.so"
-  if os.path.exists(debug_symbols):
-    copyfile(debug_symbols, target_dir + "/libgodot_symbols.android.debug.so")
+  archs = [("armv7", "armeabi-v7a"), ("x86", "x86")]
+  modes = [("release", "release"), ("debug", "release_debug")]
+  for mode_pair in modes:
+    (mode, target) = mode_pair
+    for arch_pair in archs:
+      (arch, abi) = arch_pair
+      call_or_die(["scons", jobs_arg, "android_arch=" + arch, "tools=no", "p=android", "android_stl=true", "target=" + target, "ndk_unified_headers=no"] + additional_params)
+      symbols_filename = "libgodot_symbols.android." + abi + "." + mode + ".so"
+      symbols = "bin/" + symbols_filename
+      if os.path.exists(symbols):
+        copyfile(symbols, target_dir + "/" + symbols_filename)
+    with dir("platform/android/java"):
+      call_or_die(["./gradlew", "build"])
+    copyfile("bin/android_" + mode + ".apk", target_dir + "/android_" + mode + ".apk")
 
 def build_iphone(target_dir, additional_params):
-  archs = ["arm", "arm64", "x86", "x86_64"]
+  archs = ["arm64", "x86_64"]
   for arch in archs:
     call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release", "arch=" + arch] + additional_params)
     call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release_debug", "arch=" + arch] + additional_params)
