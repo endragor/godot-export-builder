@@ -98,7 +98,8 @@ if __name__ == "__main__":
   platforms = sys.argv[3].split(",")
 
   version = imp.load_source("godot.version", godot_src + "/version.py")
-  version_str = str(version.major) + "." + str(version.minor) + "-" + version.status
+  status_separator = "-" if version.major < 3 or version.major == 3 and version.minor == 0 else "."
+  version_str = str(version.major) + "." + str(version.minor) + status_separator + version.status
 
   target_dir = os.path.expanduser(target_root_dir) + "/" + version_str
 
