@@ -99,7 +99,10 @@ if __name__ == "__main__":
 
   version = imp.load_source("godot.version", godot_src + "/version.py")
   status_separator = "-" if version.major < 3 or version.major == 3 and version.minor == 0 else "."
-  version_str = str(version.major) + "." + str(version.minor) + status_separator + version.status
+  version_str = str(version.major) + "." + str(version.minor)
+  if hasattr(version, 'patch'):
+    version_str += "." + str(version.patch)
+  version_str += status_separator + version.status
 
   target_dir = os.path.expanduser(target_root_dir) + "/" + version_str
 
