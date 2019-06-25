@@ -41,7 +41,7 @@ def build_android(target_dir, additional_params):
       if os.path.exists(symbols):
         copyfile(symbols, target_dir + "/" + symbols_filename)
     with dir("platform/android/java"):
-      call_or_die(["./gradlew", "build"])
+      call_or_die(["./gradlew", "clean", "build"])
     copyfile("bin/android_" + mode + ".apk", target_dir + "/android_" + mode + ".apk")
 
 def build_iphone(target_dir, additional_params):
