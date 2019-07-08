@@ -15,7 +15,7 @@ jobs_arg = "-j8"
 
 def call_or_die(cmd):
   print "EXEC: " + " ".join(cmd)
-  ret = call(cmd)
+  ret = call(cmd, shell=True)
   if ret != 0:
     print "Last command returned " + str(ret) + " - quitting."
     sys.exit(ret)
@@ -29,7 +29,7 @@ def copyfile(source, dest, buf_size = 1024*1024):
       dst.write(copy_buffer)
 
 def build_android(target_dir, additional_params):
-  archs = [("armv7", "armeabi-v7a"), ("x86", "x86")]
+  archs = [("armv7", "armeabi-v7a"), ("x86", "x86"), ("arm64v8", "arm64-v8a"), ("x86_64", "x86_64")]
   modes = [("release", "release"), ("debug", "release_debug")]
   for mode_pair in modes:
     (mode, target) = mode_pair
@@ -40,9 +40,14 @@ def build_android(target_dir, additional_params):
       symbols = "bin/" + symbols_filename
       if os.path.exists(symbols):
         copyfile(symbols, target_dir + "/" + symbols_filename)
-    with dir("platform/android/java"):
-      call_or_die(["./gradlew", "clean", "build"])
+  with dir("platform/android/java"):
+    call_or_die(["./gradlew", "clean", "build"])
+  for mode_pair in modes:
+    (mode, target) = mode_pair
     copyfile("bin/android_" + mode + ".apk", target_dir + "/android_" + mode + ".apk")
+    for arch_pair in archs:
+      (arch, abi) = arch_pair
+      copyfile("bin/android_" + mode + "_" + abi + ".apk", target_dir + "/android_" + mode + "_" + abi + ".apk")
 
 def build_iphone(target_dir, additional_params):
   archs = ["arm64", "x86_64"]
