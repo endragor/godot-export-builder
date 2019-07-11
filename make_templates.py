@@ -15,7 +15,10 @@ jobs_arg = "-j8"
 
 def call_or_die(cmd):
   print "EXEC: " + " ".join(cmd)
-  ret = call(cmd, shell=True)
+  if os.name == 'nt':
+    ret = call(cmd, shell=True)
+  else:
+    ret = call(cmd)
   if ret != 0:
     print "Last command returned " + str(ret) + " - quitting."
     sys.exit(ret)
