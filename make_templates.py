@@ -53,7 +53,7 @@ def build_android(target_dir, additional_params):
       copyfile("bin/android_" + mode + "_" + abi + ".apk", target_dir + "/android_" + mode + "_" + abi + ".apk")
 
 def build_iphone(target_dir, additional_params):
-  archs = ["arm64", "x86_64"]
+  archs = ["arm64"]
   for arch in archs:
     call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release", "arch=" + arch] + additional_params)
     call_or_die(["scons", jobs_arg, "tools=no", "p=iphone", "target=release_debug", "arch=" + arch] + additional_params)
